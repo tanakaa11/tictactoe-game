@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XOXO Game</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&display=swap">
+    <script src="multiplayer.js"></script>
+    <script src="server.js"></script>
+    
+
+    <style>
+        body {
+            font-family: 'Rubik Mono One', sans-serif; /* Use Rubik Mono One font */
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            background: url('mp4/87zg.gif') center center fixed;
+            background-size: cover;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            color: #ddd;
+        }
+
+        .game {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(80px, 1fr));
+            gap: 10px;
+            border: 2px solid #000;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .cell {
+            width: 100%;
+            aspect-ratio: 1/1;
+            border: 1px solid #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .cell:hover {
+            background-color: #e0e0e0;
+        }
+
+        .cell.active {
+            background-color: #e0e0e0;
+        }
+
+        .buttons {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        button {
+            font-size: 16px;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        button:hover {
+            background-color: #ddd;
+        }
+
+        .icon {
+            margin-right: 10px;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .icon-center {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+        }
+
+        .icon-center button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result {
+            position: absolute;
+            top: -25px;
+            left: 10px;
+            right: 10px;
+            text-align: center;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .result-X {
+            display: none;
+        }
+
+        .result-O {
+            display: none;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 10px;
+            appearance: none;
+            height: 10px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+        }
+
+        input[type="range"]:hover {
+            opacity: 1;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #ddd;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    
+
+    <br><br><br><br>
+    <h1>X-and-O</h1>
+    <div class="game">
+        <div class="result result-X" style="color: #ff9494;">X wins!</div>
+        <div class="result result-O" style="color: #ff9494;">O wins!</div>
+    </div>
+    <div class="scores">
+        <p style="color: #ddd;" >X Score: <span id="xPlayerScore" style="color: #ddd;">0</span></p>
+        <p style="color: #ddd;">O  Score: <span id="oPlayerScore" style="color: #ddd;">0</span></p>
+    </div>
+    <div class="buttons">
+        <button onclick="playAgain()" class="icon-center">
+            <i class="fas fa-redo-alt icon"></i>
+            Play Again
+        </button>
+        <button onclick="MenuGame()" class="icon-center">
+            <i class="fas fa-home icon"></i>
+            Main Menu
+        </button>
+    </div>
+    <audio id="roundWinSound" src="mp3/WinBandoneon.wav"></audio>
+    <audio id="buttonClickSound" src="mp3/Menu Selection Click.wav"></audio>
+    <audio id="backgroundMusic" src="mp3/Of Far Different Nature - Liquid Flame (CC0).mp3" loop autoplay ></audio>
+    <div class="icon-center" ><br><br><br>
+        <button onclick="toggleMusic()" class="icon-center" >
+            <i id="musicIcon" class="fas fa-volume-up icon" style="display:flex;"></i>
+            Music...
+        </button>
+    </div>
+    <div class="icon-center">
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5" placeholder="adjust volume">
+    </div>
+    
+
+    <script>
+        let xPlayerScore = 0;
+        let oPlayerScore = 0;
+
+        const cells = Array.from({ length: 9 }, () => null);
+        const gameDiv = document.querySelector('.game');
+        const resultDivX = document.querySelector('.result-X');
+        const resultDivO = document.querySelector('.result-O');
+        const buttonsDiv = document.querySelector('.buttons');
+        const buttonClickSound = document.getElementById('buttonClickSound');
+        const roundWinSound = document.getElementById('roundWinSound');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const musicIcon = document.getElementById('musicIcon');
+        let currentPlayer = 'X';
+
+        const cellElements = Array.from({ length: 9 }, (_, index) => {
+            const cellElement = document.createElement('div');
+            cellElement.classList.add('cell');
+            cellElement.addEventListener('click', () => handleCellClick(index));
+            gameDiv.appendChild(cellElement);
+            return cellElement;
+        });
+
+        backgroundMusic.play();
+
+        function MenuGame() {
+            window.location.href = 'index.html';
+        }
+
+        function handleCellClick(index) {
+            if (cells[index] !== null) {
+                return;
+            }
+
+            cells[index] = currentPlayer;
+            const cellElement = cellElements[index];
+            cellElement.textContent = currentPlayer;
+            cellElement.classList.add('active');
+
+            buttonClickSound.play();
+
+            const result = checkWin();
+            if (result !== null) {
+                gameOver(result);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        }
+
+        function checkWin() {
+            const lines = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6],
+            ];
+
+            for (const line of lines) {
+                const [a, b, c] = line;
+                if (cells[a] && cells[a] === cells[b] && cells[a] === cells[c]) {
+                    return cells[a];
+                }
+            }
+
+            if (cells.every(cell => cell !== null)) {
+                return 'tie';
+            }
+
+            return null;
+        }
+
+        function gameOver(result) {
+            resultDivX.style.display = 'none';
+            resultDivO.style.display = 'none';
+
+            if (result === 'tie') {
+                resultDivX.textContent = 'It\'s a tie!';
+                resultDivO.textContent = 'It\'s a tie!';
+            } else {
+                const winner = result === 'X' ? resultDivX : resultDivO;
+                winner.textContent = `${result} wins!`;
+                winner.style.display = 'block';
+
+                // Update scores and display them
+                updateScores(result);
+                displayScores();
+                // Play the round win sound
+                roundWinSound.play();
+            }
+
+            // Show the buttons only after a game has been played
+            buttonsDiv.style.display = 'flex';
+        }
+
+        function updateScores(winner) {
+            if (winner === 'X') {
+                xPlayerScore++;
+            } else if (winner === 'O') {
+                oPlayerScore++;
+            }
+        }
+
+        function displayScores() {
+            // Update the content of the score elements
+            document.getElementById('xPlayerScore').textContent = xPlayerScore;
+            document.getElementById('oPlayerScore').textContent = oPlayerScore;
+        }
+
+        function playAgain() {
+            cells.fill(null);
+            currentPlayer = 'X';
+
+            cellElements.forEach(cellElement => {
+                cellElement.textContent = '';
+                cellElement.classList.remove('active');
+            });
+
+            resultDivX.style.display = 'none';
+            resultDivO.style.display = 'none';
+            resultDivX.textContent = '';
+            resultDivO.textContent = '';
+
+            // Hide the buttons when starting a new game
+            buttonsDiv.style.display = 'none';
+        }
+
+        function toggleMusic() {
+            if (backgroundMusic.paused) {
+                backgroundMusic.play();
+                musicIcon.className = 'fas fa-volume-up icon';
+            } else {
+                backgroundMusic.pause();
+                musicIcon.className = 'fas fa-volume-off icon';
+            }
+        }
+
+        volumeSlider.addEventListener('input', () => {
+            backgroundMusic.volume = volumeSlider.value;
+        });
+
+        function isGameActive() {
+            return resultDivX.style.display === 'none' && resultDivO.style.display === 'none';
+        }
+    </script>
+</body>
+</html>
